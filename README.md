@@ -40,7 +40,7 @@ It is **off until you turn it on**:
 claude mcp add --transport http webber http://127.0.0.1:47823/mcp --header "Authorization: Bearer <your key>"
 ```
 
-**Claude Desktop:** choose **Copy Config for Claude Desktop** and paste it into `claude_desktop_config.json`. It runs `bin/webber-mcp.js` (needs Node 18+), which passes messages between Claude Desktop and the running Webber app.
+**Claude Desktop:** choose **Copy Config for Claude Desktop** and paste it into `claude_desktop_config.json`. It runs a small bridge using Webber's own executable, so nothing else needs installing. The bridge passes messages between Claude Desktop and the running Webber app.
 
 While Claude is working in a tab, that tab's icon pulses and the page gets an accent-colored border.
 
@@ -56,7 +56,7 @@ The connectors you add at claude.ai run in Anthropic's cloud and can't reach a b
 
 ## Install (Linux / Omarchy)
 
-1. Download `Webber-<version>-x86_64.AppImage` and `install-linux.sh` from the [Releases page](https://github.com/gosanikanov-spec/electron-browser/releases).
+1. Download `Webber-<version>-x86_64.AppImage` and `install-linux.sh` from the [Releases page](https://github.com/gosanikanov-spec/webber-browser/releases).
 2. Run the installer:
 
 ```bash
@@ -68,6 +68,10 @@ That puts Webber in `~/.local/bin` and adds it to your app launcher (`Super+Spac
 ```bash
 sudo pacman -S fuse2
 ```
+
+## Install (Windows)
+
+From the [Releases page](https://github.com/gosanikanov-spec/webber-browser/releases), download **Webber-Setup-&lt;version&gt;.exe** (installer) or **Webber-&lt;version&gt;-portable.exe** (no install). The builds aren't code-signed yet, so if SmartScreen warns you, click **More info** → **Run anyway**.
 
 ## Run from source
 

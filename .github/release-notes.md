@@ -13,11 +13,20 @@ Webber then shows up in your app launcher. Add `--default` to the end to also ma
 
 You can also just make the AppImage executable and double-click it.
 
+## Install on Windows
+
+Download one of these:
+
+- **Webber-Setup-0.1.0.exe**: an installer that adds Webber to the Start menu and desktop.
+- **Webber-0.1.0-portable.exe**: runs straight away, no install needed.
+
+These builds aren't code-signed yet, so Windows SmartScreen may say "Windows protected your PC". Click **More info** → **Run anyway**.
+
 ## What's in it
 
 - Vertical tabs in a sidebar, round pinned-tab icons, and a compact mode (`Ctrl+B`)
 - An address bar that drops down from the top and suggests your open tabs and history
-- Colors from your Omarchy theme, updating live when you switch themes
+- Colors from your Omarchy theme, updating live when you switch themes (on Windows, it follows light/dark mode)
 - Ad and tracker blocking
 - A Claude connector, off by default. Turn it on from the ✳ button in the sidebar.
 

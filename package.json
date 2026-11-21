@@ -49,8 +49,20 @@
     },
     "win": {
       "target": [
-        "nsis"
-      ]
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
     },
     "asarUnpack": [
       "bin/**/*"
@@ -58,6 +70,17 @@
     "directories": {
       "buildResources": "build",
       "output": "dist"
+    },
+    "nsis": {
+      "artifactName": "Webber-Setup-${version}.exe",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Webber"
+    },
+    "portable": {
+      "artifactName": "Webber-${version}-portable.exe"
     }
   },
   "devDependencies": {

@@ -320,8 +320,16 @@ function claudeCodeCommand() {
   return `claude mcp add --transport http webber http://127.0.0.1:${connectorConfig.port}/mcp --header "Authorization: Bearer ${connectorConfig.token}"`;
 }
 
+// Webber's own executable runs the bridge (ELECTRON_RUN_AS_NODE makes it act as plain
+// Node), so Claude Desktop needs nothing else installed. An AppImage mounts somewhere
+// new each launch, so point at the AppImage file itself there.
 function claudeDesktopConfig() {
-  return JSON.stringify({ mcpServers: { webber: { command: 'node', args: [bridgePath()] } } }, null, 2);
+  const command = process.env.APPIMAGE || process.execPath;
+  return JSON.stringify({
+    mcpServers: {
+      webber: { command, args: [bridgePath()], env: { ELECTRON_RUN_AS_NODE: '1' } },
+    },
+  }, null, 2);
 }
 
 function connectorMenu(w) {
