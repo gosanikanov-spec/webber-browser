@@ -1,0 +1,41 @@
+{
+  "name": "webber",
+  "productName": "Webber",
+  "version": "0.1.0",
+  "description": "A Chromium-based browser that just feels clean.",
+  "main": "src/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "app.webber.browser",
+    "productName": "Webber",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Network"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.20.3"
+  }
+}
