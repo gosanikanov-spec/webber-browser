@@ -6,7 +6,9 @@ const {
 } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const theme = require('./theme');
+const { createConnector } = require('./connector');
 
 const IS_MAC = process.platform === 'darwin';
 // Tiling window managers (Omarchy runs Hyprland) don't want in-app window buttons.
@@ -203,6 +205,142 @@ function saveSession() {
   } catch {}
 }
 const scheduleSaveSession = debounce(saveSession, 400);
+
+// ---------------------------------------------------------------- Claude connector
+const CONNECTOR_PORT = Number(process.env.WEBBER_MCP_PORT) || 47823;
+const AGENT_GLOW_MS = 4000;
+let connectorConfig = null;
+let connectorError = null;
+let lastAgentActivity = 0;
+
+function loadConnectorConfig() {
+  const saved = readJson(userFile('connector.json'), {});
+  connectorConfig = {
+    enabled: !!saved.enabled,
+    token: typeof saved.token === 'string' && saved.token.length >= 32 ? saved.token : crypto.randomBytes(24).toString('hex'),
+    port: CONNECTOR_PORT,
+  };
+  saveConnectorConfig();
+}
+
+function saveConnectorConfig() {
+  try {
+    fs.writeFileSync(userFile('connector.json'), JSON.stringify(connectorConfig, null, 2), { mode: 0o600 });
+  } catch {}
+}
+
+function allTabs() { return windows.flatMap((w) => w.tabs.map((t) => ({ w, t }))); }
+function shellOfTab(tab) { return windows.find((w) => w.tabs.includes(tab)); }
+function frontShell() { return windows.find((w) => w.win.isFocused()) || windows[0]; }
+
+// What the connector is allowed to do with the browser.
+const browserApi = {
+  listTabs: () => allTabs().map(({ w, t }) => ({
+    id: t.id,
+    title: t.isNewTab ? 'New Tab' : (t.title || displayHost(t.view.webContents.getURL())),
+    url: t.isNewTab ? '' : t.view.webContents.getURL(),
+    active: w.activeId === t.id,
+    pinned: t.pinned,
+  })),
+  getTab: (id) => {
+    if (id == null) { const w = frontShell(); return w && w.activeTab(); }
+    const hit = allTabs().find(({ t }) => t.id === id);
+    return hit && hit.t;
+  },
+  openTab: (url, background) => {
+    const w = frontShell() || new BrowserShell({ tabs: [] });
+    const tab = w.newTab(toUrl(url) || NEW_TAB_URL, { background, afterActive: true });
+    if (!background) w.closeOverlay();
+    return tab;
+  },
+  activate: (id) => {
+    const hit = allTabs().find(({ t }) => t.id === id);
+    if (hit && hit.w.activeId !== id) { hit.w.closeOverlay(); hit.w.activate(id); }
+  },
+  closeTab: (id) => {
+    const hit = allTabs().find(({ t }) => t.id === id);
+    if (hit) hit.w.closeTab(id);
+  },
+  markAgent: (tab) => {
+    tab.agentAt = Date.now();
+    lastAgentActivity = tab.agentAt;
+    const w = shellOfTab(tab);
+    if (w) {
+      w.scheduleSync();
+      clearTimeout(tab.agentTimer);
+      tab.agentTimer = setTimeout(() => w.scheduleSync(), AGENT_GLOW_MS + 50);
+    }
+  },
+  onActivity: () => {
+    lastAgentActivity = Date.now();
+    for (const w of windows) w.scheduleSync();
+    clearTimeout(browserApi.idleTimer);
+    browserApi.idleTimer = setTimeout(() => windows.forEach((w) => w.scheduleSync()), AGENT_GLOW_MS + 50);
+  },
+  toUrl,
+  searchHistory: (query, limit) => {
+    const q = query.toLowerCase();
+    return history
+      .filter((h) => h.url.toLowerCase().includes(q) || (h.title || '').toLowerCase().includes(q))
+      .sort((a, b) => b.last - a.last)
+      .slice(0, limit);
+  },
+};
+
+const connector = createConnector(browserApi);
+
+async function applyConnector() {
+  connectorError = null;
+  if (connectorConfig.enabled) {
+    try { await connector.start(connectorConfig); connector.update(connectorConfig); }
+    catch (err) {
+      connectorError = err.code === 'EADDRINUSE' ? `Port ${connectorConfig.port} is already in use.` : err.message;
+      console.warn('[webber] connector failed to start:', connectorError);
+    }
+  } else {
+    connector.stop();
+  }
+  for (const w of windows) w.scheduleSync();
+}
+
+function bridgePath() {
+  return path.join(__dirname, '..', 'bin', 'webber-mcp.js').replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+}
+
+function claudeCodeCommand() {
+  return `claude mcp add --transport http webber http://127.0.0.1:${connectorConfig.port}/mcp --header "Authorization: Bearer ${connectorConfig.token}"`;
+}
+
+function claudeDesktopConfig() {
+  return JSON.stringify({ mcpServers: { webber: { command: 'node', args: [bridgePath()] } } }, null, 2);
+}
+
+function connectorMenu(w) {
+  const on = connectorConfig.enabled;
+  const status = connectorError
+    ? `Couldn’t start: ${connectorError}`
+    : on ? `On — listening on 127.0.0.1:${connectorConfig.port}` : 'Off';
+  Menu.buildFromTemplate([
+    { label: status, enabled: false },
+    { type: 'separator' },
+    {
+      label: 'Let Claude Use Webber', type: 'checkbox', checked: on,
+      click: () => { connectorConfig.enabled = !on; saveConnectorConfig(); applyConnector(); },
+    },
+    { type: 'separator' },
+    { label: 'Copy Setup Command for Claude Code', click: () => clipboard.writeText(claudeCodeCommand()) },
+    { label: 'Copy Config for Claude Desktop', click: () => clipboard.writeText(claudeDesktopConfig()) },
+    { type: 'separator' },
+    {
+      label: 'Reset Access Key',
+      click: () => {
+        connectorConfig.token = crypto.randomBytes(24).toString('hex');
+        saveConnectorConfig();
+        connector.update(connectorConfig);
+      },
+    },
+  ]).popup({ window: w.win });
+}
 
 // ---------------------------------------------------------------- window
 const windows = [];
@@ -506,12 +644,19 @@ class BrowserShell {
         canForward: wc.navigationHistory.canGoForward(),
         zoom: wc.getZoomFactor(),
         blocked: t.blocked,
+        agent: !!t.agentAt && Date.now() - t.agentAt < AGENT_GLOW_MS,
       };
     });
     this.ui.webContents.send('state', {
       tabs,
       activeId: this.activeId,
       blocking: blocker ? blockingEnabled : null,
+      connector: {
+        enabled: connectorConfig.enabled,
+        running: connector.running,
+        error: connectorError,
+        active: Date.now() - lastAgentActivity < AGENT_GLOW_MS,
+      },
       layout: {
         compact: this.compact,
         overlay: this.overlay,
@@ -725,6 +870,7 @@ ipcMain.on('cmd', (event, cmd, arg) => {
       break;
     case 'find-close': w.closeFind(); if (wc) wc.focus(); break;
     case 'tab-menu': w.tabMenu(arg); break;
+    case 'connector-menu': connectorMenu(w); break;
     case 'win-min': w.win.minimize(); break;
     case 'win-max': w.win.isMaximized() ? w.win.unmaximize() : w.win.maximize(); break;
     case 'win-close': w.win.close(); break;
@@ -752,6 +898,7 @@ if (!app.requestSingleInstanceLock()) {
 
     ERROR_TEMPLATE = fs.readFileSync(path.join(PAGES_DIR, 'error.html'), 'utf8');
     history = readJson(userFile('history.json'), []);
+    loadConnectorConfig();
 
     protocol.handle('webber', (req) => {
       const { host } = new URL(req.url);
@@ -773,6 +920,7 @@ if (!app.requestSingleInstanceLock()) {
     }
 
     await setupBlocker();
+    await applyConnector();
 
     const argUrl = process.argv.slice(1).find((a) => /^https?:/.test(a));
     const saved = readJson(userFile('session.json'), null);

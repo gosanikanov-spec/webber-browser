@@ -500,3 +500,21 @@ body.blurred:not(.compact) #sidebar { opacity: .8; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0s !important; transition: none !important; }
 }
+
+/* ------------------------------------------------------------ Claude connector */
+#claude { opacity: .5; }
+#claude.on { opacity: 1; color: var(--accent); }
+#claude.error { opacity: 1; color: #ef4444; }
+#claude.active svg { animation: spin 3s linear infinite; }
+
+/* the tab Claude is working in glows in the accent color */
+.tab.agent .fav, .essential.agent .fav { border-radius: 50%; animation: agent 1.6s ease-in-out infinite; }
+.essential.agent { box-shadow: 0 0 0 2px var(--accent); }
+@keyframes agent {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent); }
+}
+body.agent-active #card {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 24px color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: box-shadow .3s;
+}

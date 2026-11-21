@@ -176,6 +176,7 @@ function renderTabs() {
 
   syncList(els.essentials, pinned, makeEssential, (el, t) => {
     el.classList.toggle('active', t.id === state.activeId);
+    el.classList.toggle('agent', !!t.agent);
     el.classList.toggle('busy', t.audible || t.loading);
     el.title = t.title;
     favicon(el.querySelector('.fav'), t);
@@ -183,6 +184,7 @@ function renderTabs() {
 
   syncList(els.tabs, regular, makeTab, (el, t) => {
     el.classList.toggle('active', t.id === state.activeId);
+    el.classList.toggle('agent', !!t.agent);
     el.title = t.title;
     el.setAttribute('aria-selected', t.id === state.activeId);
     el.querySelector('.title').textContent = t.title;
@@ -218,6 +220,16 @@ function renderChrome() {
     root.setProperty('--card-left', `${L.compact ? L.gap : L.sidebarWidth}px`);
     root.setProperty('--find-h', L.findOpen ? `${L.findHeight}px` : '0px');
   }
+
+  const c = state.connector || {};
+  const claude = $('claude');
+  claude.classList.toggle('on', !!c.running);
+  claude.classList.toggle('error', !!c.error);
+  claude.classList.toggle('active', !!c.active);
+  claude.title = c.error ? `Claude connector couldn’t start: ${c.error}`
+    : c.running ? (c.active ? 'Claude is using Webber' : 'Claude can use Webber. Click for setup.')
+    : 'Let Claude use Webber…';
+  body.toggle('agent-active', !!(t && t.agent));
 
   if (!t) return;
   els.back.disabled = !t.canBack;
@@ -258,6 +270,7 @@ els.urlbar.addEventListener('click', (e) => {
   api.cmd('omnibox', false);
 });
 els.shield.addEventListener('click', () => api.cmd('toggle-blocking'));
+$('claude').addEventListener('click', () => api.cmd('connector-menu'));
 $('toggle-sidebar').addEventListener('click', () => api.cmd('toggle-compact'));
 $('win-min').addEventListener('click', () => api.cmd('win-min'));
 $('win-max').addEventListener('click', () => api.cmd('win-max'));

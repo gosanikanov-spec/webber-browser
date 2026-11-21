@@ -14,6 +14,7 @@
     "productName": "Webber",
     "files": [
       "src/**/*",
+      "bin/**/*",
       "package.json"
     ],
     "mac": {
@@ -29,13 +30,21 @@
       "target": [
         "nsis"
       ]
-    }
+    },
+    "asarUnpack": [
+      "bin/**/*"
+    ]
   },
   "devDependencies": {
     "electron": "^45.4.1",
     "electron-builder": "^26.18.0"
   },
   "dependencies": {
-    "@ghostery/adblocker-electron": "^2.20.3"
+    "@ghostery/adblocker-electron": "^2.20.3",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "bin": {
+    "webber-mcp": "bin/webber-mcp.js"
   }
 }
