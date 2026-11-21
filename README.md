@@ -2,9 +2,9 @@
 
 A Chromium-based browser that just feels clean. Built on Electron.
 
-- **Vertical tabs in a sidebar**, with the page floating as a rounded card inside a thin frame.
-- **Pinned tabs** sit as icon tiles at the top of the sidebar. Right-click a tab and choose Pin, or drag it up there.
-- **Floating address bar.** `Ctrl+L` or `Ctrl+T` opens a centered bar that suggests your open tabs and history as you type.
+- **Vertical tabs in a sidebar**, with the page as a rounded card inside a thin frame. The current tab has an accent stripe; back, forward and reload sit at the bottom.
+- **Pinned tabs** sit as a row of round icons at the top of the sidebar. Right-click a tab and choose Pin, or drag it up there.
+- **Drop-down address bar.** `Ctrl+L` or `Ctrl+T` slides a bar down from the top of the page that suggests your open tabs and history as you type.
 - **Compact mode** (`Ctrl+B`) hides the sidebar. Move the mouse to the left edge of the window to bring it back over the page.
 - **Uses your Omarchy theme.** See below.
 - **Blocks ads and trackers** out of the box (Ghostery's engine). The shield shows how many requests were blocked; click it to turn blocking off.

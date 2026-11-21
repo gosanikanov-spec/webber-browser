@@ -115,19 +115,18 @@ body.compact.peek #sidebar {
 }
 
 #topbar {
-  height: 38px;
+  height: 34px;
   flex: none;
   display: flex;
   align-items: center;
   gap: 4px;
   -webkit-app-region: drag;
 }
-#topbar .nav { display: flex; gap: 1px; }
+/* nothing to show up here on tiling WMs: drop the bar entirely */
+body:not(.darwin):not(.controls) #topbar { display: none; }
+body:not(.darwin):not(.controls) #urlbar { margin-top: 2px; }
 .traffic-space { display: none; width: 68px; }
 body.darwin .traffic-space { display: block; }
-body.darwin #topbar { flex-direction: row; }
-body.darwin #topbar .nav { order: 3; }
-body.darwin #topbar .spacer { order: 2; }
 #winctl { display: none; gap: 1px; }
 body.controls #winctl { display: flex; }
 
@@ -141,7 +140,7 @@ body.controls #winctl { display: flex; }
   align-items: center;
   gap: 7px;
   height: 36px;
-  margin: 4px 0 10px;
+  margin: 4px 0 12px;
   padding: 0 11px;
   border-radius: 10px;
   background: var(--field);
@@ -171,37 +170,44 @@ body.controls #winctl { display: flex; }
   background: var(--hover);
 }
 
-/* ------------------------------------------------------------ essentials (pinned) */
+/* ------------------------------------------------------------ pinned */
 #essentials {
   flex: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 8px;
+  padding: 0 4px;
+  margin-bottom: 14px;
 }
 #essentials:empty { display: none; }
 #essentials.drop-target:empty {
   display: block;
-  height: 46px;
+  height: 36px;
   border: 1.5px dashed var(--line);
-  border-radius: 10px;
+  border-radius: 999px;
 }
 
 .essential {
   position: relative;
-  height: 46px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
   background: var(--field);
-  transition: background .12s, box-shadow .12s;
+  transition: background .12s, box-shadow .12s, transform .12s;
 }
-.essential:hover { background: var(--hover); }
-.essential.active {
-  background: var(--raised);
-  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 55%, transparent), 0 1px 3px var(--shadow-color);
+.essential:hover { background: var(--hover); transform: translateY(-1px); }
+.essential.active { box-shadow: 0 0 0 2px var(--accent); background: var(--raised); }
+/* a small accent dot under a pinned tab that is playing sound or loading */
+.essential.busy::after {
+  content: "";
+  position: absolute;
+  bottom: -5px; left: 50%;
+  width: 4px; height: 4px; margin-left: -2px;
+  border-radius: 50%;
+  background: var(--accent);
 }
-.essential .fav img { width: 18px; height: 18px; }
 
 /* ------------------------------------------------------------ tabs */
 #tablist {
@@ -210,12 +216,22 @@ body.controls #winctl { display: flex; }
   display: flex;
   flex-direction: column;
 }
-.divider {
-  height: 1px;
-  margin: 2px 8px 8px;
-  background: var(--line);
+.section {
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 2px 0 10px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
+#tab-count { font-weight: 500; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+#new-tab { width: 24px; height: 24px; }
 
 #tabs {
   flex: 1;
@@ -241,13 +257,19 @@ body.controls #winctl { display: flex; }
   transition: background .12s, color .12s;
 }
 .row:hover, .tab:hover { background: var(--hover); color: var(--fg); }
-#new-tab { margin-bottom: 2px; }
-#new-tab svg { width: 14px; height: 14px; }
-
+/* current tab: an accent stripe and a faint accent wash, not a raised card */
+.tab { position: relative; }
 .tab.active {
-  background: var(--raised);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
   color: var(--fg);
-  box-shadow: 0 1px 2px var(--shadow-color), 0 0 0 .5px var(--line);
+}
+.tab.active::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 9px; bottom: 9px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
 }
 .tab.dragging, .essential.dragging { opacity: .4; }
 .tab.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
@@ -292,18 +314,23 @@ body.controls #winctl { display: flex; }
 .tab .audio:hover, .tab .close:hover { background: var(--hover); color: var(--fg); }
 .tab .audio[hidden] { display: none; }
 .tab .close { opacity: 0; }
-.tab:hover .close { opacity: 1; }
+.tab:hover .close, .tab.active .close { opacity: 1; }
 
 /* ------------------------------------------------------------ footer */
 #foot {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 36px;
-  padding-top: 4px;
+  gap: 1px;
+  height: 40px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
 }
 #theme-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 11px;
   color: var(--faint);
   padding-right: 4px;
@@ -323,7 +350,7 @@ body.controls #winctl { display: flex; }
   right: var(--gap);
   bottom: calc(var(--gap) + var(--find-h));
   border-radius: var(--radius);
-  box-shadow: 0 0 0 1px var(--line), 0 2px 14px var(--shadow-color);
+  box-shadow: 0 0 0 1px var(--line), 0 1px 4px var(--shadow-color);
   pointer-events: none;
 }
 body.overlay #card, body.html-fs #card { display: none; }
@@ -374,18 +401,19 @@ body.compact:not(.overlay) #edge { display: block; }
   position: fixed;
   inset: 0;
   display: none;
-  background: rgba(0, 0, 0, .22);
+  background: rgba(0, 0, 0, .14);
 }
-body.light #omnibox { background: rgba(0, 0, 0, .1); }
+body.light #omnibox { background: rgba(0, 0, 0, .06); }
 body.omni #omnibox { display: block; animation: fade .12s ease-out; }
 
 #omni-panel {
   position: absolute;
-  top: max(64px, 16vh);
+  top: var(--gap);
   left: calc(var(--card-left) + (100vw - var(--card-left) - var(--gap)) / 2);
-  width: min(660px, calc(100vw - var(--card-left) - 48px));
+  width: min(760px, calc(100vw - var(--card-left) - var(--gap) - 32px));
   transform: translateX(-50%);
-  border-radius: 14px;
+  border-radius: 0 0 14px 14px;
+  border-top: 2px solid var(--accent);
   background: var(--panel);
   box-shadow: 0 0 0 1px var(--line), 0 24px 64px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .15);
   overflow: hidden;
@@ -465,7 +493,7 @@ body.omni #omnibox { display: block; animation: fade .12s ease-out; }
 
 @keyframes pop { from { opacity: 0; transform: translateY(3px); } }
 @keyframes fade { from { opacity: 0; } }
-@keyframes rise { from { opacity: 0; transform: translate(-50%, -6px) scale(.985); } }
+@keyframes rise { from { opacity: 0; transform: translate(-50%, -12px); } }
 
 body.blurred:not(.compact) #sidebar { opacity: .8; }
 

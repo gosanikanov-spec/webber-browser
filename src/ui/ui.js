@@ -176,6 +176,7 @@ function renderTabs() {
 
   syncList(els.essentials, pinned, makeEssential, (el, t) => {
     el.classList.toggle('active', t.id === state.activeId);
+    el.classList.toggle('busy', t.audible || t.loading);
     el.title = t.title;
     favicon(el.querySelector('.fav'), t);
   });
@@ -192,6 +193,8 @@ function renderTabs() {
     if (audio.dataset.icon !== icon) { audio.dataset.icon = icon; audio.innerHTML = ICONS[icon]; }
     audio.title = t.muted ? 'Unmute tab' : 'Mute tab';
   });
+
+  $('tab-count').textContent = regular.length || '';
 
   const a = els.tabs.querySelector('.tab.active');
   if (a) a.scrollIntoView({ block: 'nearest' });
