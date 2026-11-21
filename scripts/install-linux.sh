@@ -24,11 +24,16 @@ mkdir -p "$bin_dir" "$app_dir" "$icon_dir"
 install -m 755 "$appimage" "$bin_dir/webber"
 echo "Installed $bin_dir/webber"
 
-# Pull the icon out of the AppImage.
+# Pull the icon out of the AppImage. (The top-level webber.png is only a symlink,
+# so extract the real file.) A missing icon must never stop the install.
+icon_path='usr/share/icons/hicolor/512x512/apps/webber.png'
 tmp=$(mktemp -d)
-( cd "$tmp" && "$bin_dir/webber" --appimage-extract 'webber.png' >/dev/null 2>&1 || "$bin_dir/webber" --appimage-extract '*.png' >/dev/null 2>&1 || true )
-icon=$(find "$tmp/squashfs-root" -maxdepth 1 -name '*.png' 2>/dev/null | head -n1 || true)
-[[ -n "$icon" ]] && cp "$icon" "$icon_dir/webber.png"
+( cd "$tmp" && "$bin_dir/webber" --appimage-extract "$icon_path" >/dev/null 2>&1 ) || true
+if [[ -f "$tmp/squashfs-root/$icon_path" ]]; then
+  cp "$tmp/squashfs-root/$icon_path" "$icon_dir/webber.png" || true
+else
+  echo "(Couldn't extract the icon; Webber will use a generic one.)"
+fi
 rm -rf "$tmp"
 
 cat > "$app_dir/webber.desktop" <<DESKTOP
@@ -46,6 +51,11 @@ StartupWMClass=Webber
 Keywords=browser;web;internet;
 DESKTOP
 update-desktop-database "$app_dir" >/dev/null 2>&1 || true
+gtk-update-icon-cache -q "$HOME/.local/share/icons/hicolor" >/dev/null 2>&1 || true
+# Omarchy's launcher (Walker) keeps a list of apps in memory; restart it so Webber shows up now.
+if command -v omarchy-restart-walker >/dev/null 2>&1; then
+  omarchy-restart-walker >/dev/null 2>&1 || true
+fi
 echo "Added Webber to your app launcher"
 
 if [[ " $* " == *" --default "* ]]; then
