@@ -4,11 +4,14 @@
   <meta charset="utf-8">
   <title>New Tab</title>
   <style>
-    :root { --bg: #ffffff; --fg: #1d1d1f; --dim: #a1a1a6; }
-    @media (prefers-color-scheme: dark) {
-      :root { --bg: #2c2c2e; --fg: #f2f2f7; --dim: #6e6e73; }
-    }
-    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+    :root { --bg: #1b1b1f; --fg: #e4e4e7; --accent: #8b9cf7; }
+  </style>
+  <!--theme-->
+  <style>
+    /* the page card is a touch lifted from the Omarchy background the frame uses */
+    :root { --card: color-mix(in srgb, var(--bg), var(--fg) 4%); }
+    @media (prefers-color-scheme: light) { :root { --card: var(--bg); } }
+    html, body { margin: 0; height: 100%; background: var(--card); color: var(--fg); }
     body {
       display: grid;
       place-items: center;
@@ -25,7 +28,16 @@
       font-variant-numeric: tabular-nums;
       line-height: 1;
     }
-    #date { margin-top: 14px; font-size: 15px; color: var(--dim); letter-spacing: .01em; }
+    #date { margin-top: 14px; font-size: 15px; color: color-mix(in srgb, var(--fg) 50%, var(--card)); }
+    #date::before {
+      content: "";
+      display: block;
+      width: 28px; height: 2px;
+      margin: 0 auto 16px;
+      border-radius: 2px;
+      background: var(--accent);
+      opacity: .8;
+    }
     @keyframes in { from { opacity: 0; transform: translateY(-4vh); } }
     @media (prefers-reduced-motion: reduce) { main { animation: none; } }
   </style>

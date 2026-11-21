@@ -2,58 +2,84 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; style-src 'self'; script-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
   <link rel="stylesheet" href="ui.css">
 </head>
 <body>
-  <header id="tabstrip">
-    <div id="tabs" role="tablist"></div>
-    <button id="new-tab" class="icon" title="New tab (Ctrl+T)" aria-label="New tab">
-      <svg viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9"/></svg>
-    </button>
-    <div class="drag-fill"></div>
-  </header>
+  <aside id="sidebar">
+    <div id="topbar">
+      <div class="traffic-space"></div>
+      <div class="nav">
+        <button id="back" class="icon" title="Back" aria-label="Back">
+          <svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>
+        </button>
+        <button id="forward" class="icon" title="Forward" aria-label="Forward">
+          <svg viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg>
+        </button>
+        <button id="reload" class="icon" title="Reload" aria-label="Reload">
+          <svg class="i-reload" viewBox="0 0 16 16"><path d="M12.5 8a4.5 4.5 0 1 1-1.3-3.2M12.5 3v2.5H10"/></svg>
+          <svg class="i-stop" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>
+        </button>
+      </div>
+      <div class="spacer"></div>
+      <div id="winctl">
+        <button id="win-min" class="icon small" aria-label="Minimize"><svg viewBox="0 0 16 16"><path d="M4 8h8"/></svg></button>
+        <button id="win-max" class="icon small" aria-label="Maximize"><svg viewBox="0 0 16 16"><rect x="4.5" y="4.5" width="7" height="7" rx="1.5"/></svg></button>
+        <button id="win-close" class="icon small" aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg></button>
+      </div>
+    </div>
 
-  <nav id="toolbar">
-    <button id="back" class="icon" title="Back" aria-label="Back">
-      <svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>
-    </button>
-    <button id="forward" class="icon" title="Forward" aria-label="Forward">
-      <svg viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></svg>
-    </button>
-    <button id="reload" class="icon" title="Reload" aria-label="Reload">
-      <svg class="i-reload" viewBox="0 0 16 16"><path d="M12.5 8a4.5 4.5 0 1 1-1.3-3.2M12.5 3v2.5H10"/></svg>
-      <svg class="i-stop" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>
+    <button id="urlbar" title="Search or enter address (Ctrl+L)">
+      <svg class="lock" viewBox="0 0 16 16"><rect x="4" y="7.2" width="8" height="5.8" rx="1.4"/><path d="M5.8 7.2V5.6a2.2 2.2 0 0 1 4.4 0v1.6"/></svg>
+      <span id="urltext"></span>
+      <span id="zoom" class="pill" hidden></span>
     </button>
 
-    <form id="omnibox">
-      <span id="secure" aria-hidden="true">
-        <svg viewBox="0 0 16 16"><rect x="4" y="7.2" width="8" height="5.8" rx="1.4"/><path d="M5.8 7.2V5.6a2.2 2.2 0 0 1 4.4 0v1.6"/></svg>
-      </span>
-      <input id="address" spellcheck="false" autocomplete="off" placeholder="Search or enter address">
-      <button id="zoom" type="button" class="pill" title="Reset zoom" hidden></button>
-      <div id="progress"></div>
-    </form>
+    <div id="essentials"></div>
 
-    <form id="find" hidden>
-      <input id="find-input" spellcheck="false" placeholder="Find in page">
-      <span id="find-count"></span>
-      <button type="button" id="find-prev" class="icon small" aria-label="Previous match">
-        <svg viewBox="0 0 16 16"><path d="M4 10l4-4 4 4"/></svg>
+    <div id="tablist">
+      <div class="divider"></div>
+      <button id="new-tab" class="row">
+        <span class="fav"><svg viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9"/></svg></span>
+        <span class="title">New Tab</span>
       </button>
-      <button type="button" id="find-next" class="icon small" aria-label="Next match">
-        <svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>
-      </button>
-      <button type="button" id="find-close" class="icon small" aria-label="Close find">
-        <svg viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>
-      </button>
-    </form>
+      <div id="tabs" role="tablist"></div>
+    </div>
 
-    <button id="shield" class="icon" title="Content blocking" aria-label="Content blocking" hidden>
-      <svg viewBox="0 0 16 16"><path d="M8 2.2 3.2 4v3.7c0 3 2.1 5.2 4.8 6.1 2.7-.9 4.8-3.1 4.8-6.1V4z"/></svg>
-      <span id="blocked-count"></span>
-    </button>
-  </nav>
+    <footer id="foot">
+      <button id="shield" class="icon" hidden>
+        <svg viewBox="0 0 16 16"><path d="M8 2.2 3.2 4v3.7c0 3 2.1 5.2 4.8 6.1 2.7-.9 4.8-3.1 4.8-6.1V4z"/></svg>
+        <span id="blocked-count"></span>
+      </button>
+      <div class="spacer"></div>
+      <span id="theme-name"></span>
+      <button id="toggle-sidebar" class="icon" title="Toggle sidebar (Ctrl+B)" aria-label="Toggle sidebar">
+        <svg viewBox="0 0 16 16"><rect x="2.5" y="3" width="11" height="10" rx="2"/><path d="M6.5 3v10"/></svg>
+      </button>
+    </footer>
+  </aside>
+
+  <div id="card"></div>
+  <div id="edge"></div>
+
+  <form id="find" hidden>
+    <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="m10 10 3 3"/></svg>
+    <input id="find-input" spellcheck="false" placeholder="Find in page">
+    <span id="find-count"></span>
+    <button type="button" id="find-prev" class="icon small" aria-label="Previous match"><svg viewBox="0 0 16 16"><path d="M4 10l4-4 4 4"/></svg></button>
+    <button type="button" id="find-next" class="icon small" aria-label="Next match"><svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg></button>
+    <button type="button" id="find-close" class="icon small" aria-label="Close find"><svg viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg></button>
+  </form>
+
+  <div id="omnibox">
+    <div id="omni-panel">
+      <form id="omni-form">
+        <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="m10 10 3 3"/></svg>
+        <input id="omni-input" spellcheck="false" autocomplete="off" placeholder="Search or enter address">
+      </form>
+      <div id="omni-list" role="listbox"></div>
+    </div>
+  </div>
 
   <script src="ui.js"></script>
 </body>

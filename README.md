@@ -2,11 +2,27 @@
 
 A Chromium-based browser that just feels clean. Built on Electron.
 
-- **Quiet chrome.** One tab strip, one toolbar. The address bar shows only the site's name until you click it.
+- **Vertical tabs in a sidebar**, with the page floating as a rounded card inside a thin frame.
+- **Pinned tabs** sit as icon tiles at the top of the sidebar. Right-click a tab and choose Pin, or drag it up there.
+- **Floating address bar.** `Ctrl+L` or `Ctrl+T` opens a centered bar that suggests your open tabs and history as you type.
+- **Compact mode** (`Ctrl+B`) hides the sidebar. Move the mouse to the left edge of the window to bring it back over the page.
+- **Uses your Omarchy theme.** See below.
 - **Blocks ads and trackers** out of the box (Ghostery's engine). The shield shows how many requests were blocked; click it to turn blocking off.
 - **Calm pages.** A new tab is a clock. A failed load is a sentence and a "Try again" button, not a wall of text.
-- **Follows your system's light or dark mode.**
+- **Without Omarchy**, it follows your system's light or dark mode.
 - **Remembers your tabs** between launches.
+
+## Omarchy themes
+
+Webber reads the active theme from `~/.config/omarchy/current/theme/colors.toml`:
+
+- `background` becomes the frame and sidebar color.
+- `foreground` becomes the text color.
+- `accent` becomes the highlight color.
+
+Themes that only have an `alacritty.toml` work too. A `light.mode` file makes everything light, including what websites see as your light/dark preference.
+
+When you switch themes (`omarchy-theme-set`, or the Omarchy menu), Webber changes with it right away. You don't need to restart. Under Hyprland the in-app window buttons are hidden, because the window manager handles windows.
 
 ## Run it
 
@@ -34,7 +50,8 @@ npm run dist
 | Close tab | `Ctrl+W` |
 | Reopen closed tab | `Ctrl+Shift+T` |
 | Address bar | `Ctrl+L`, `Alt+D`, `F6` |
-| Next / previous tab | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
+| Toggle sidebar (compact mode) | `Ctrl+B` |
+| Next / previous tab | `Ctrl+Tab` / `Ctrl+Shift+Tab`, `Ctrl+Alt+↓` / `Ctrl+Alt+↑` |
 | Jump to tab | `Ctrl+1` … `Ctrl+9` |
 | Back / forward | `Alt+←` / `Alt+→` (`⌘[` / `⌘]`) |
 | Reload / hard reload | `Ctrl+R` / `Ctrl+Shift+R` |
@@ -43,14 +60,15 @@ npm run dist
 | Full screen | `F11` |
 | Developer tools | `F12` |
 
-Middle-click a tab to close it. Drag tabs to reorder them. Double-click empty tab-strip space for a new tab. Right-click a tab for more.
+Middle-click a tab to close it. Drag tabs to reorder them. Right-click a tab to pin, mute or duplicate it.
 
 ## Layout
 
 ```
-src/main.js      window, tabs, shortcuts, content blocking, session restore
-src/preload.js   the small bridge between the toolbar UI and the main process
-src/ui/          the tab strip and toolbar (HTML/CSS/JS)
+src/main.js      window, tabs, shortcuts, history, content blocking, session restore
+src/theme.js     reads and watches the Omarchy theme
+src/preload.js   the small bridge between the browser UI and the main process
+src/ui/          the sidebar, frame, floating address bar and find bar (HTML/CSS/JS)
 src/pages/       the new tab page and the error page
 ```
 

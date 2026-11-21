@@ -2,25 +2,32 @@
 
 const $ = (id) => document.getElementById(id);
 const api = window.webber;
-
-const platform = new URLSearchParams(location.search).get('platform') || '';
-document.body.classList.add(platform);
+const params = new URLSearchParams(location.search);
+document.body.classList.add(params.get('platform') || '');
+if (params.get('controls') === '1') document.body.classList.add('controls');
 
 const els = {
-  tabs: $('tabs'), newTab: $('new-tab'),
   back: $('back'), forward: $('forward'), reload: $('reload'),
-  omnibox: $('omnibox'), address: $('address'), zoom: $('zoom'),
-  shield: $('shield'), blocked: $('blocked-count'),
+  urlbar: $('urlbar'), urltext: $('urltext'), zoom: $('zoom'),
+  essentials: $('essentials'), tabs: $('tabs'), newTab: $('new-tab'),
+  shield: $('shield'), blocked: $('blocked-count'), themeName: $('theme-name'),
   find: $('find'), findInput: $('find-input'), findCount: $('find-count'),
+  omnibox: $('omnibox'), omniInput: $('omni-input'), omniList: $('omni-list'),
 };
 
-let state = { tabs: [], activeId: null, blocking: null };
-let editing = false;      // user is typing in the address bar
-let lastLoading = false;
-
+let state = { tabs: [], activeId: null, blocking: null, layout: {} };
 const active = () => state.tabs.find((t) => t.id === state.activeId);
 
-// ------------------------------------------------------------ rendering
+const ICONS = {
+  close: '<svg viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>',
+  audio: '<svg viewBox="0 0 16 16"><path d="M3 6.2h2.2L8.4 3.5v9L5.2 9.8H3z"/><path d="M10.6 5.6a3.4 3.4 0 0 1 0 4.8M12.3 4a5.6 5.6 0 0 1 0 8"/></svg>',
+  muted: '<svg viewBox="0 0 16 16"><path d="M3 6.2h2.2L8.4 3.5v9L5.2 9.8H3z"/><path d="m10.5 6 3.5 4M14 6l-3.5 4"/></svg>',
+  search: '<svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="m10 10 3 3"/></svg>',
+  globe: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M2.5 8h11M8 2.5c1.6 1.6 2.3 3.5 2.3 5.5S9.6 11.9 8 13.5C6.4 11.9 5.7 10 5.7 8S6.4 4.1 8 2.5"/></svg>',
+  clock: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg>',
+  tab: '<svg viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="9" rx="2"/><path d="M2.5 6.5h11"/></svg>',
+};
+
 function displayUrl(url) {
   if (!url) return '';
   try {
@@ -30,116 +37,194 @@ function displayUrl(url) {
   return url;
 }
 
-function renderTabs() {
-  const existing = new Map([...els.tabs.children].map((el) => [Number(el.dataset.id), el]));
+function favicon(el, t) {
+  const key = t.loading ? 'loading' : (t.favicon || 'none');
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
+  el.replaceChildren();
+  const dot = () => Object.assign(document.createElement('div'), { className: 'dot' });
+  if (t.loading) {
+    el.append(Object.assign(document.createElement('div'), { className: 'spinner' }));
+  } else if (t.favicon) {
+    const img = new Image();
+    img.src = t.favicon;
+    img.onerror = () => img.replaceWith(dot());
+    el.append(img);
+  } else {
+    el.append(dot());
+  }
+}
 
-  state.tabs.forEach((t, i) => {
+// ------------------------------------------------------------ theme
+api.on('theme', (t) => {
+  const root = document.documentElement.style;
+  root.setProperty('--frame', t.frame);
+  root.setProperty('--fg', t.foreground);
+  root.setProperty('--accent', t.accent);
+  document.body.classList.toggle('light', t.mode === 'light');
+  els.themeName.textContent = t.source === 'omarchy' ? t.name.replace(/-/g, ' ') : '';
+  els.themeName.title = t.source === 'omarchy' ? 'Colors from your Omarchy theme' : '';
+});
+
+// ------------------------------------------------------------ tabs
+function syncList(container, tabs, make, update) {
+  const existing = new Map([...container.children].map((el) => [Number(el.dataset.id), el]));
+  tabs.forEach((t, i) => {
     let el = existing.get(t.id);
-    if (!el) el = createTab(t.id);
+    if (!el) el = make(t.id);
     existing.delete(t.id);
-    if (els.tabs.children[i] !== el) els.tabs.insertBefore(el, els.tabs.children[i] || null);
-
-    el.classList.toggle('active', t.id === state.activeId);
-    el.title = t.title;
-    el.setAttribute('aria-selected', t.id === state.activeId);
-    el.querySelector('.title').textContent = t.title;
-
-    const fav = el.querySelector('.fav');
-    const favKey = t.loading ? 'loading' : (t.favicon || 'none');
-    if (fav.dataset.key !== favKey) {
-      fav.dataset.key = favKey;
-      fav.replaceChildren();
-      if (t.loading) {
-        fav.append(Object.assign(document.createElement('div'), { className: 'spinner' }));
-      } else if (t.favicon) {
-        const img = new Image();
-        img.src = t.favicon;
-        img.onerror = () => img.replaceWith(Object.assign(document.createElement('div'), { className: 'dot' }));
-        fav.append(img);
-      } else {
-        fav.append(Object.assign(document.createElement('div'), { className: 'dot' }));
-      }
-    }
+    if (container.children[i] !== el) container.insertBefore(el, container.children[i] || null);
+    update(el, t);
   });
   existing.forEach((el) => el.remove());
-  fitTabs();
 }
 
-// Collapse tabs to icons only when there is no room for titles.
-function fitTabs() {
-  const strip = $('tabstrip');
-  const cs = getComputedStyle(strip);
-  const room = strip.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - els.newTab.offsetWidth - 24;
-  const narrow = room / Math.max(state.tabs.length, 1) < 76;
-  for (const el of els.tabs.children) el.classList.toggle('narrow', narrow);
+function makeEssential(id) {
+  const el = document.createElement('button');
+  el.className = 'essential';
+  el.dataset.id = id;
+  el.innerHTML = '<span class="fav"></span>';
+  bindTabEvents(el, id, true);
+  return el;
 }
 
-function createTab(id) {
+function makeTab(id) {
   const el = document.createElement('div');
   el.className = 'tab';
   el.dataset.id = id;
   el.setAttribute('role', 'tab');
-  el.draggable = true;
   el.innerHTML = `
     <span class="fav"></span>
     <span class="title"></span>
-    <button class="close" aria-label="Close tab" tabindex="-1">
-      <svg viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>
-    </button>`;
-
-  el.addEventListener('mousedown', (e) => {
-    if (e.button === 0 && !e.target.closest('.close')) api.cmd('activate', id);
-  });
-  el.addEventListener('auxclick', (e) => { if (e.button === 1) api.cmd('close-tab', id); });
-  el.addEventListener('contextmenu', (e) => { e.preventDefault(); api.cmd('tab-menu', id); });
+    <button class="audio" hidden tabindex="-1"></button>
+    <button class="close" aria-label="Close tab" tabindex="-1">${ICONS.close}</button>`;
+  bindTabEvents(el, id, false);
   el.querySelector('.close').addEventListener('click', (e) => { e.stopPropagation(); api.cmd('close-tab', id); });
-
-  el.addEventListener('dragstart', (e) => {
-    e.dataTransfer.setData('text/webber-tab', String(id));
-    e.dataTransfer.effectAllowed = 'move';
-    el.classList.add('dragging');
-  });
-  el.addEventListener('dragend', () => el.classList.remove('dragging'));
-  el.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
-  el.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const dragged = Number(e.dataTransfer.getData('text/webber-tab'));
-    if (!dragged || dragged === id) return;
-    const rect = el.getBoundingClientRect();
-    let index = state.tabs.findIndex((t) => t.id === id);
-    const from = state.tabs.findIndex((t) => t.id === dragged);
-    if (e.clientX > rect.left + rect.width / 2) index += 1;
-    if (from < index) index -= 1;
-    api.cmd('move-tab', { id: dragged, index });
-  });
+  el.querySelector('.audio').addEventListener('click', (e) => { e.stopPropagation(); api.cmd('toggle-mute', id); });
   return el;
 }
 
-function renderToolbar() {
+let dragId = null;
+function bindTabEvents(el, id, pinned) {
+  el.draggable = true;
+  el.addEventListener('mousedown', (e) => {
+    if (e.button === 0 && !e.target.closest('.close, .audio')) api.cmd('activate', id);
+  });
+  el.addEventListener('auxclick', (e) => { if (e.button === 1) api.cmd('close-tab', id); });
+  el.addEventListener('contextmenu', (e) => { e.preventDefault(); api.cmd('tab-menu', id); });
+  el.addEventListener('dragstart', (e) => {
+    dragId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+    el.classList.add('dragging');
+    els.essentials.classList.add('drop-target');
+  });
+  el.addEventListener('dragend', () => {
+    dragId = null;
+    el.classList.remove('dragging');
+    els.essentials.classList.remove('drop-target');
+    clearDropMarks();
+  });
+  el.addEventListener('dragover', (e) => {
+    if (dragId == null || dragId === id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (!pinned) {
+      clearDropMarks();
+      const r = el.getBoundingClientRect();
+      el.classList.add(e.clientY > r.top + r.height / 2 ? 'drop-after' : 'drop-before');
+    }
+  });
+  el.addEventListener('drop', (e) => {
+    if (dragId == null || dragId === id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = el.getBoundingClientRect();
+    const after = pinned ? e.clientX > r.left + r.width / 2 : e.clientY > r.top + r.height / 2;
+    dropAt(id, after, pinned);
+  });
+}
+
+function clearDropMarks() {
+  for (const el of document.querySelectorAll('.drop-before, .drop-after')) el.classList.remove('drop-before', 'drop-after');
+}
+
+function dropAt(targetId, after, pinned) {
+  const others = state.tabs.filter((t) => t.id !== dragId);
+  let index = others.findIndex((t) => t.id === targetId) + (after ? 1 : 0);
+  api.cmd('move-tab', { id: dragId, index, pinned });
+  clearDropMarks();
+}
+
+// Dropping on empty essentials area pins; dropping on the empty tab area unpins.
+els.essentials.addEventListener('dragover', (e) => { if (dragId != null) e.preventDefault(); });
+els.essentials.addEventListener('drop', (e) => {
+  if (dragId == null) return;
+  e.preventDefault();
+  api.cmd('move-tab', { id: dragId, index: state.tabs.filter((t) => t.pinned && t.id !== dragId).length, pinned: true });
+});
+els.tabs.addEventListener('dragover', (e) => { if (dragId != null) e.preventDefault(); });
+els.tabs.addEventListener('drop', (e) => {
+  if (dragId == null) return;
+  e.preventDefault();
+  api.cmd('move-tab', { id: dragId, index: state.tabs.length, pinned: false });
+});
+
+function renderTabs() {
+  const pinned = state.tabs.filter((t) => t.pinned);
+  const regular = state.tabs.filter((t) => !t.pinned);
+
+  syncList(els.essentials, pinned, makeEssential, (el, t) => {
+    el.classList.toggle('active', t.id === state.activeId);
+    el.title = t.title;
+    favicon(el.querySelector('.fav'), t);
+  });
+
+  syncList(els.tabs, regular, makeTab, (el, t) => {
+    el.classList.toggle('active', t.id === state.activeId);
+    el.title = t.title;
+    el.setAttribute('aria-selected', t.id === state.activeId);
+    el.querySelector('.title').textContent = t.title;
+    favicon(el.querySelector('.fav'), t);
+    const audio = el.querySelector('.audio');
+    audio.hidden = !(t.audible || t.muted);
+    const icon = t.muted ? 'muted' : 'audio';
+    if (audio.dataset.icon !== icon) { audio.dataset.icon = icon; audio.innerHTML = ICONS[icon]; }
+    audio.title = t.muted ? 'Unmute tab' : 'Mute tab';
+  });
+
+  const a = els.tabs.querySelector('.tab.active');
+  if (a) a.scrollIntoView({ block: 'nearest' });
+}
+
+function renderChrome() {
   const t = active();
+  const L = state.layout;
+  const body = document.body.classList;
+  body.toggle('compact', !!L.compact);
+  body.toggle('overlay', !!L.overlay);
+  body.toggle('peek', L.overlay === 'peek');
+  if (L.overlay !== 'omnibox') body.remove('omni');
+  body.toggle('html-fs', !!L.htmlFullscreen);
+
+  const root = document.documentElement.style;
+  if (L.sidebarWidth) {
+    root.setProperty('--sidebar-w', `${L.sidebarWidth}px`);
+    root.setProperty('--gap', `${L.gap}px`);
+    root.setProperty('--radius', `${L.radius}px`);
+    root.setProperty('--card-left', `${L.compact ? L.gap : L.sidebarWidth}px`);
+    root.setProperty('--find-h', L.findOpen ? `${L.findHeight}px` : '0px');
+  }
+
   if (!t) return;
   els.back.disabled = !t.canBack;
   els.forward.disabled = !t.canForward;
   els.reload.classList.toggle('loading', t.loading);
   els.reload.title = t.loading ? 'Stop' : 'Reload';
 
-  if (!editing) {
-    els.address.value = document.activeElement === els.address ? t.url : displayUrl(t.url);
-  }
-  els.omnibox.classList.toggle('https', t.url.startsWith('https://'));
-  els.omnibox.classList.toggle('has-url', !!t.url);
-
-  // progress line
-  if (t.loading && !lastLoading) {
-    els.omnibox.classList.remove('done');
-    void els.omnibox.offsetWidth;
-    els.omnibox.classList.add('loading');
-  } else if (!t.loading && lastLoading) {
-    els.omnibox.classList.remove('loading');
-    els.omnibox.classList.add('done');
-  }
-  lastLoading = t.loading;
-
+  els.urltext.textContent = t.url ? displayUrl(t.url) : 'Search or enter address';
+  els.urlbar.classList.toggle('empty', !t.url);
+  els.urlbar.classList.toggle('https', t.url.startsWith('https://'));
   const zoom = Math.round(t.zoom * 100);
   els.zoom.hidden = zoom === 100;
   els.zoom.textContent = `${zoom}%`;
@@ -147,21 +232,17 @@ function renderToolbar() {
   els.shield.hidden = state.blocking === null;
   els.shield.classList.toggle('on', !!state.blocking);
   els.shield.title = state.blocking
-    ? `Blocking ads & trackers${t.blocked ? ` — ${t.blocked} blocked on this page` : ''}. Click to turn off.`
+    ? `Blocking ads & trackers${t.blocked ? ` — ${t.blocked} on this page` : ''}. Click to turn off.`
     : 'Content blocking is off. Click to turn on.';
   els.blocked.textContent = state.blocking && t.blocked ? (t.blocked > 99 ? '99+' : t.blocked) : '';
 }
 
-let prevActive = null;
 api.on('state', (s) => {
   state = s;
-  if (prevActive !== s.activeId) { editing = false; lastLoading = false; els.omnibox.classList.remove('loading', 'done'); }
-  prevActive = s.activeId;
   renderTabs();
-  renderToolbar();
+  renderChrome();
 });
 
-window.addEventListener('resize', fitTabs);
 api.on('window-focus', (f) => document.body.classList.toggle('blurred', !f));
 
 // ------------------------------------------------------------ controls
@@ -169,42 +250,115 @@ els.newTab.addEventListener('click', () => api.cmd('new-tab'));
 els.back.addEventListener('click', () => api.cmd('back'));
 els.forward.addEventListener('click', () => api.cmd('forward'));
 els.reload.addEventListener('click', () => api.cmd(active()?.loading ? 'stop' : 'reload'));
-els.zoom.addEventListener('click', () => api.cmd('zoom-reset'));
+els.urlbar.addEventListener('click', (e) => {
+  if (e.target === els.zoom) return api.cmd('zoom-reset');
+  api.cmd('omnibox', false);
+});
 els.shield.addEventListener('click', () => api.cmd('toggle-blocking'));
-$('tabstrip').addEventListener('dblclick', (e) => {
-  if (e.target.id === 'tabstrip' || e.target.classList.contains('drag-fill')) api.cmd('new-tab');
+$('toggle-sidebar').addEventListener('click', () => api.cmd('toggle-compact'));
+$('win-min').addEventListener('click', () => api.cmd('win-min'));
+$('win-max').addEventListener('click', () => api.cmd('win-max'));
+$('win-close').addEventListener('click', () => api.cmd('win-close'));
+$('topbar').addEventListener('dblclick', (e) => { if (e.target.closest('button') == null) api.cmd('win-max'); });
+
+// compact mode: reveal the sidebar from the left edge
+let peekTimer = null;
+$('edge').addEventListener('mouseenter', () => {
+  peekTimer = setTimeout(() => api.cmd('peek'), 60);
+});
+$('edge').addEventListener('mouseleave', () => clearTimeout(peekTimer));
+$('sidebar').addEventListener('mouseleave', () => {
+  if (document.body.classList.contains('peek')) api.cmd('overlay-close');
+});
+document.addEventListener('mousedown', (e) => {
+  if (document.body.classList.contains('peek') && !e.target.closest('#sidebar')) api.cmd('overlay-close');
 });
 
-// ------------------------------------------------------------ address bar
-els.address.addEventListener('focus', () => {
-  const t = active();
-  els.address.value = t ? t.url : '';
-  requestAnimationFrame(() => els.address.select());
+// ------------------------------------------------------------ floating address bar
+const omni = { newTab: false, items: [], index: -1, seq: 0 };
+
+api.on('omnibox-open', ({ newTab, url }) => {
+  omni.newTab = newTab;
+  document.body.classList.add('overlay', 'omni');
+  els.omniInput.value = url || '';
+  els.omniInput.placeholder = newTab ? 'Open a new tab — search or enter address' : 'Search or enter address';
+  els.omniInput.focus();
+  els.omniInput.select();
+  refreshSuggestions(url ? null : '');
 });
-els.address.addEventListener('blur', () => { editing = false; renderToolbar(); });
-els.address.addEventListener('input', () => { editing = true; });
-els.address.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    editing = false;
-    const t = active();
-    els.address.value = t ? t.url : '';
-    if (t && t.url) api.cmd('focus-page');
-    else els.address.select();
-  }
+
+function closeOmnibox() {
+  document.body.classList.remove('omni');
+  api.cmd('overlay-close');
+}
+
+async function refreshSuggestions(query) {
+  const seq = ++omni.seq;
+  const items = query == null ? [] : await api.suggest(query);
+  if (seq !== omni.seq) return;
+  omni.items = items;
+  omni.index = query ? 0 : -1;
+  renderSuggestions();
+}
+
+function renderSuggestions() {
+  els.omniList.replaceChildren(...omni.items.map((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'omni-item' + (i === omni.index ? ' selected' : '');
+    row.setAttribute('role', 'option');
+
+    const ic = document.createElement('span');
+    ic.className = 'ic';
+    if (item.type === 'tab' && item.favicon) {
+      const img = new Image();
+      img.src = item.favicon;
+      img.onerror = () => { ic.innerHTML = ICONS.tab; };
+      ic.append(img);
+    } else {
+      ic.innerHTML = { search: ICONS.search, url: ICONS.globe, history: ICONS.clock, tab: ICONS.tab }[item.type];
+    }
+
+    const t = Object.assign(document.createElement('span'), { className: 't', textContent: item.title });
+    const u = Object.assign(document.createElement('span'), { className: 'u' });
+    const hint = Object.assign(document.createElement('span'), { className: 'hint' });
+    if (item.type === 'search') { u.textContent = '— Search with DuckDuckGo'; hint.textContent = 'Enter'; hint.classList.add('only-selected'); }
+    else if (item.type === 'url') { u.textContent = ''; hint.textContent = 'Open'; hint.classList.add('only-selected'); }
+    else if (item.type === 'tab') { u.textContent = displayUrl(item.url); hint.textContent = 'Switch to tab'; }
+    else u.textContent = displayUrl(item.url);
+
+    row.append(ic, t, u);
+    if (hint.textContent) row.append(hint);
+    row.addEventListener('mousemove', () => {
+      if (omni.index !== i) { omni.index = i; renderSuggestions(); }
+    });
+    row.addEventListener('mousedown', (e) => { e.preventDefault(); choose(item); });
+    return row;
+  }));
+}
+
+function choose(item) {
+  document.body.classList.remove('omni');
+  if (item.type === 'tab') api.cmd('switch-tab', item.tabId);
+  else api.cmd('navigate', { text: item.url, newTab: omni.newTab });
+}
+
+els.omniInput.addEventListener('input', () => refreshSuggestions(els.omniInput.value));
+els.omniInput.addEventListener('keydown', (e) => {
+  const n = omni.items.length;
+  if (e.key === 'ArrowDown' && n) { e.preventDefault(); omni.index = (omni.index + 1) % n; renderSuggestions(); }
+  else if (e.key === 'ArrowUp' && n) { e.preventDefault(); omni.index = (omni.index - 1 + n) % n; renderSuggestions(); }
+  else if (e.key === 'Escape') { e.preventDefault(); closeOmnibox(); }
 });
-els.omnibox.addEventListener('submit', (e) => {
+$('omni-form').addEventListener('submit', (e) => {
   e.preventDefault();
-  const v = els.address.value.trim();
-  if (!v) return;
-  editing = false;
-  els.address.blur();
-  api.cmd('navigate', v);
+  const item = omni.items[omni.index];
+  if (item) return choose(item);
+  const text = els.omniInput.value.trim();
+  if (!text) return;
+  document.body.classList.remove('omni');
+  api.cmd('navigate', { text, newTab: omni.newTab });
 });
-
-api.on('focus-address', () => {
-  els.address.focus();
-  els.address.select();
-});
+els.omnibox.addEventListener('mousedown', (e) => { if (e.target === els.omnibox) closeOmnibox(); });
 
 // ------------------------------------------------------------ find
 function sendFind(opts = {}) {
@@ -214,7 +368,7 @@ els.findInput.addEventListener('input', () => {
   if (!els.findInput.value) { els.findCount.textContent = ''; els.find.classList.remove('miss'); }
   sendFind();
 });
-els.find.addEventListener('submit', (e) => { e.preventDefault(); });
+els.find.addEventListener('submit', (e) => e.preventDefault());
 els.findInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); sendFind({ next: true, forward: !e.shiftKey }); }
   if (e.key === 'Escape') api.cmd('find-close');
@@ -235,7 +389,6 @@ api.on('find-close', () => {
   els.find.classList.remove('miss');
 });
 api.on('find-result', (r) => {
-  if (!r.finalUpdate && r.matches === undefined) return;
   els.findCount.textContent = els.findInput.value ? `${r.activeMatchOrdinal || 0}/${r.matches}` : '';
   els.find.classList.toggle('miss', !!els.findInput.value && r.matches === 0);
 });

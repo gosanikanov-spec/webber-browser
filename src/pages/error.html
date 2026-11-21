@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <title>{{host}}</title>
+  <style>:root { --bg: #1b1b1f; --fg: #e4e4e7; --accent: #8b9cf7; }</style>
+  <!--theme-->
   <style>
-    :root { --bg: #ffffff; --fg: #1d1d1f; --dim: #8e8e93; --btn: rgba(0,0,0,.06); }
-    @media (prefers-color-scheme: dark) {
-      :root { --bg: #2c2c2e; --fg: #f2f2f7; --dim: #8e8e93; --btn: rgba(255,255,255,.08); }
-    }
-    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+    :root { --card: color-mix(in srgb, var(--bg), var(--fg) 4%); --dim: color-mix(in srgb, var(--fg) 55%, var(--card)); }
+    @media (prefers-color-scheme: light) { :root { --card: var(--bg); } }
+    html, body { margin: 0; height: 100%; background: var(--card); color: var(--fg); }
     body {
       display: grid; place-items: center;
       font: 15px/1.5 system-ui, -apple-system, "Segoe UI", "Inter", sans-serif;
@@ -20,9 +20,10 @@
     code { font-size: 11px; color: var(--dim); opacity: .7; display: block; margin-top: 18px; }
     button {
       margin-top: 22px; padding: 8px 18px; border: 0; border-radius: 999px;
-      background: var(--btn); color: var(--fg); font: inherit; font-size: 13.5px; cursor: pointer;
+      background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--fg);
+      font: inherit; font-size: 13.5px; cursor: pointer;
     }
-    button:hover { filter: brightness(.96); }
+    button:hover { background: color-mix(in srgb, var(--accent) 32%, transparent); }
   </style>
 </head>
 <body>
