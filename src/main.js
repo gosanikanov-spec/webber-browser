@@ -303,8 +303,17 @@ async function applyConnector() {
   for (const w of windows) w.scheduleSync();
 }
 
+// The packaged app's folder can move (an AppImage mounts somewhere new on every
+// launch), so keep a copy of the Claude Desktop bridge at a stable path.
 function bridgePath() {
-  return path.join(__dirname, '..', 'bin', 'webber-mcp.js').replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  const stable = userFile('webber-mcp.js');
+  try {
+    fs.copyFileSync(path.join(__dirname, '..', 'bin', 'webber-mcp.js'), stable);
+    fs.chmodSync(stable, 0o755);
+    return stable;
+  } catch {
+    return path.join(__dirname, '..', 'bin', 'webber-mcp.js');
+  }
 }
 
 function claudeCodeCommand() {
@@ -363,6 +372,7 @@ class BrowserShell {
       minWidth: 560,
       minHeight: 360,
       show: false,
+      icon: path.join(__dirname, 'icon.png'),
       backgroundColor: frameColor(activeTheme),
       ...(IS_MAC
         ? { titleBarStyle: 'hidden', trafficLightPosition: { x: 18, y: 18 } }

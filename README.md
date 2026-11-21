@@ -54,7 +54,22 @@ Clicking and typing bring that tab to the front, so you can watch. One tool runs
 
 The connectors you add at claude.ai run in Anthropic's cloud and can't reach a browser on your computer. Use Claude Code or Claude Desktop for this.
 
-## Run it
+## Install (Linux / Omarchy)
+
+1. Download `Webber-<version>-x86_64.AppImage` and `install-linux.sh` from the [Releases page](https://github.com/gosanikanov-spec/electron-browser/releases).
+2. Run the installer:
+
+```bash
+bash ~/Downloads/install-linux.sh ~/Downloads/Webber-0.1.0-x86_64.AppImage
+```
+
+That puts Webber in `~/.local/bin` and adds it to your app launcher (`Super+Space` on Omarchy). To also make it your default browser, add `--default` at the end. If it won't start, install FUSE 2:
+
+```bash
+sudo pacman -S fuse2
+```
+
+## Run from source
 
 ```bash
 npm install
@@ -69,6 +84,8 @@ npm start
 ```bash
 npm run dist
 ```
+
+The AppImage is written to `dist/`.
 
 ## Shortcuts
 

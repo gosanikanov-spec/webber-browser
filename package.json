@@ -2,7 +2,7 @@
   "name": "webber",
   "productName": "Webber",
   "version": "0.1.0",
-  "description": "A Chromium-based browser that just feels clean.",
+  "description": "A clean Chromium-based browser that uses your Omarchy theme and can be used by Claude.",
   "main": "src/main.js",
   "license": "MIT",
   "scripts": {
@@ -22,9 +22,30 @@
     },
     "linux": {
       "target": [
-        "AppImage"
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
-      "category": "Network"
+      "category": "Network;WebBrowser",
+      "executableName": "webber",
+      "icon": "build/icon.png",
+      "artifactName": "Webber-${version}-${arch}.AppImage",
+      "mimeTypes": [
+        "x-scheme-handler/http",
+        "x-scheme-handler/https",
+        "text/html",
+        "application/xhtml+xml"
+      ],
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "Webber",
+          "Keywords": "browser;web;internet;"
+        }
+      },
+      "syncDesktopName": true
     },
     "win": {
       "target": [
@@ -33,7 +54,11 @@
     },
     "asarUnpack": [
       "bin/**/*"
-    ]
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    }
   },
   "devDependencies": {
     "electron": "^45.4.1",
@@ -46,5 +71,8 @@
   },
   "bin": {
     "webber-mcp": "bin/webber-mcp.js"
-  }
+  },
+  "author": "Webber",
+  "homepage": "https://github.com/gosanikanov-spec/electron-browser",
+  "desktopName": "webber.desktop"
 }
